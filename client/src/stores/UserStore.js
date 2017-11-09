@@ -19,11 +19,11 @@ export default class UserStore {
         username: username,
         password: password
      }).then((answer) => { 
-        // console.log(answer);
+        console.log(answer);
         if (answer.data.success) {
           let loggedUser={
-            firstName: answer.data.firstName, 
-            lastName: answer.data.lastName,
+            firstname: answer.data.firstname, 
+            lastname: answer.data.lastname,
             email: answer.data.email,
             id: answer.data.id,
             img: answer.data.img
@@ -45,8 +45,8 @@ export default class UserStore {
 createNewUser(newUserObj) {
   return new Promise((resolve, reject)=>{
   axios.post("/signup", 
-   {firstName: newUserObj.firstName,
-    lastName: newUserObj.lastName,
+   {firstname: newUserObj.firstname,
+    lastname: newUserObj.lastname,
     email: newUserObj.email,
     password: newUserObj.password}
     ).then((userObj)=>{

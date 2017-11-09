@@ -16,6 +16,7 @@ var Dashboard = observer(class Dashboard extends Component {
   }
 
    render () {
+     console.log(this.props.userStore)
     let imgLink = "/img/avatars/default.png";
     if (this.props.userStore.user) {
       imgLink = "/img/avatars/" + this.props.userStore.user.img;
@@ -39,8 +40,8 @@ var Dashboard = observer(class Dashboard extends Component {
           <Grid>
             <Grid.Column computer={8} mobile={16} tablet={8}>
               <h1>Dashboard</h1>
-              <h2>Welcome, {this.props.userStore.user.firstName} {this.props.userStore.user.lastName} </h2>
-                <img alt={this.props.userStore.user.firstName} src={imgLink} />
+              <h2>Welcome, {this.props.userStore.user.firstname} {this.props.userStore.user.lastname} </h2>
+                <img alt={this.props.userStore.user.firstname} src={imgLink} />
               <p><strong>Settings: </strong><br/>
               Email: {this.props.userStore.user.email}  
               </p>

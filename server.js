@@ -12,6 +12,7 @@ let expressSession = require('express-session');
 let LocalStrategy = require("passport-local").Strategy; // constructor
 let passwordHash = require('password-hash');
 const cookieParser = require('cookie-parser');
+const { Pool } = require('pg')
 require('dotenv').config();
 
 let mongodbUri = "mongodb://"+process.env.SERVER_MLAB_USER+":"+process.env.SERVER_MLAB_PASSWORD+"@ds119345.mlab.com:19345/mcs";
@@ -28,6 +29,26 @@ db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function () {
   console.log('database connected to Buffaloed');
 });
+
+
+
+
+// const pool = new Pool({ // find this port using \conninfo 
+//   user: 'jeanine',
+//   host: 'localhost',
+//   database: 'super_awesome_application',
+//   password: process.env.MYPW,
+//   port: 5432,
+// })
+
+const pool = new Pool({ // find this port using \conninfo 
+  user: process.env.ELEPHANT_DB_USER,
+  host: 'baasu.db.elephantsql.com',
+  database: process.env.ELEPHANT_DB_USER,
+  password: process.env.ELEPHANT_DB_PASSWORD,
+  port: 5432
+})
+
 
 /* passport has strategies which are functions that prove that a user trying to hit your server has permission */
 if (process.env.NODE_ENV === 'production') { 
@@ -46,29 +67,27 @@ app.use(passport.session());
 // needs to be called username 
 passport.use(new LocalStrategy({email: 'username', password: 'password'},
 function(email, password, done){
-  console.log(email, password);
   // hit the db and do some matching
-  User.findOne({
-    email: email
-  }, function (err, user) {
+  let query = 'SELECT * from users where email = \'' + email + '\'';
+  pool.query(query, function(err, user, fields) {
     if (err) {
       return done(err, null); // null for no user
     } else {
-      if (user && passwordHash.verify(password, user.password)){
-        return done(null, user);
+      if (user.rows[0] && passwordHash.verify(password, user.rows[0].password)){
+        return done(null, user.rows[0]);
       } else {
         // additional test and error handling here
         return done("Password and username don't match", null)
       }
     }
   });
-}
-));
+  }
+)); 
 
 // store that they have logged in in a session with a cookie
 // serialize auth user which puts user into cookie for requests
 passport.serializeUser(function(user, done){
-  done(null, user._id); // mongodb user id
+  done(null, user.id); // mongodb user id
 });
 
 passport.deserializeUser(function(id, done){
@@ -86,30 +105,40 @@ app.get("/", function(req, res, next) {
 });
 
 app.get('/user', function(req, res, next) {
+  
+
   // if no req user
   if (req.user) {
-    User.findById(req.user._id, (err, user)=>{
-      res.json(user);
+    console.log(req.user);
+    pool.query('SELECT * from users where email = ' + req.user.email, function(err, rows, fields) {
+      if (err) throw err;
+      console.log(rows.rows)
+      res.json(rows.rows)
+      // console.log('causing uncaught exception: ', object.empty.null);
     });
+  
+    // User.findById(req.user._id, (err, user)=>{
+    //   res.json(user);
+    // });
     //res.json(req.user); // when a server sets the cookies, this responds whats in the cookie
   } else {
     res.json({redirect: "/login", message: "not authenticated"})
   }
 });
 
-app.get('/users', function(req, res, next) {
-  User.find(function(req, users) {
-    res.json(users);
-  });
+app.get('/users', function(req, res, next) { 
+  pool.query('SELECT * from users', function(err, rows, fields) {
+    if (err) throw err;
+    res.json(rows.rows)
+  }); 
 });
 
 app.get('/sights', function(req, res, next) {
-  Sight.find(function(err, sights) {
-    if(err){
-      next(err)
-    } else {
-      res.json(sights);
-    }   
+  let query = 'SELECT * from sights';
+  pool.query(query, function(err, sights, fields) {
+    console.log(sights.rows)
+    if (err) throw err;
+      res.json(sights.rows); 
   });
 });
 
@@ -178,8 +207,8 @@ app.post('/deleteSight', function(req, res, next) {
 
 app.post('/signup', function(req, res, next) {
   let user = new User();
-  user.firstName = req.body.firstName;
-  user.lastName = req.body.lastName;
+  user.firstname = req.body.firstname;
+  user.lastname = req.body.lastname;
   user.email = req.body.email;
   user.password = req.body.password;
   user.save(function(err, newUser){
@@ -306,7 +335,7 @@ app.post('/login', function (req, res, next) {
     if (err) {
       res.json({ found: false, success: false, err: true, message: err}); // can also send res.status
     } else if (user) {
-      console.log(user);
+      // console.log(user);
       // write code to send user to dashboard - passport 
       req.logIn(user, (err)=>{
         //console.log(user);
@@ -316,8 +345,8 @@ app.post('/login', function (req, res, next) {
         } else {
           res.json({found: true, success: true, 
             id: user.id, email: user.email, 
-            firstName: user.firstName, lastName: user.lastName,
-            img: user.img
+            firstname: user.firstname, lastname: user.lastname,
+            img: user.img, role: user.role
           });
         }
       })

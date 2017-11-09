@@ -22,7 +22,7 @@ export default class FeatureCard extends Component {
       image={img}
       header={this.props.sight.name}
       meta={meta}
-      description={this.props.sight.desc}
+      description={this.props.sight.description}
       extra={extra}
       />
     );
